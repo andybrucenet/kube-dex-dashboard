@@ -1,0 +1,71 @@
+---
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: default
+  name: sab-default-role-binding
+subjects:
+- kind: Group
+  name: "grp.kubeadm-clu<%= @kubeadm_clu -%>.users"
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: sab-default-role
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: sab-admin-role-binding
+subjects:
+- kind: Group
+  name: "grp.k8sperm.admins"
+roleRef:
+  kind: ClusterRole
+  name: sab-admin-role
+  apiGroup: rbac.authorization.k8s.io
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: dex
+subjects:
+- kind: ServiceAccount
+  name: dex
+  namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: dex
+  apiGroup: rbac.authorization.k8s.io
+---
+# required binding to permit std users to access dashboard
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: kube-system
+  name: sab-dashboard-role-binding
+subjects:
+- kind: Group
+  name: "grp.kubeadm-clu<%= @kubeadm_clu -%>.users"
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: sab-dashboard-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# required cluster binding to permit std users to access dashboard
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: kube-system
+  name: sab-dashboard-clusterrole-binding
+subjects:
+- kind: Group
+  name: "grp.kubeadm-clu<%= @kubeadm_clu -%>.users"
+  apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: ClusterRole
+  name: sab-dashboard-clusterrole
+  apiGroup: rbac.authorization.k8s.io
+---
+

@@ -1,0 +1,134 @@
+# note that user-ids are base64-encoded.
+# see https://github.com/coreos/dex/issues/942
+<% @kubeadm_dex_users.each do |kubeadm_dex_user| -%>
+---
+# authorized namespace for user
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: <%= kubeadm_dex_user %>
+---
+# setup an owner role within the namespace
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: <%= kubeadm_dex_user %>
+  name: sab-ns-owner
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]
+---
+# bind the owner role to the user
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: <%= kubeadm_dex_user %>
+  name: sab-ns-<%= kubeadm_dex_user %>
+subjects:
+  - kind: User
+    name: "<%= @kubeadm_dex_login['issuer'] -%>#<%= scope.function_k8s_dex_uid([kubeadm_dex_user, @kubeadm_dex_login['connector-id']]) -%>"
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: sab-ns-owner
+  apiGroup: rbac.authorization.k8s.io
+---
+# permit this user to access only assigned dashboard
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: kube-system
+  name: sab-dashboard-role-<%= kubeadm_dex_user %>
+rules:
+  - apiGroups: [""]
+    resources: ["services/proxy"]
+    resourceNames: ["sab-dashboard-<%= kubeadm_dex_user -%>"]
+    verbs: ["get", "list", "delete", "update"]
+---
+# permit this user to access only assigned dashboard
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: kube-system
+  name: sab-dashboard-rolebinding-<%= kubeadm_dex_user %>
+subjects:
+  - kind: User
+    name: "<%= @kubeadm_dex_login['issuer'] -%>#<%= scope.function_k8s_dex_uid([kubeadm_dex_user, @kubeadm_dex_login['connector-id']]) -%>"
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  kind: Role
+  name: sab-dashboard-role-<%= kubeadm_dex_user %>
+  apiGroup: rbac.authorization.k8s.io
+---
+## ABr: the following is a test of minimal required cluster functions to control access.
+## see:
+##  * main issue: https://github.com/kubernetes/dashboard/issues/964
+##  * also: https://github.com/kubernetes/dashboard/issues/574
+##  * also: https://github.com/kubernetes/dashboard/pull/1539
+#kind: ClusterRoleBinding
+#apiVersion: rbac.authorization.k8s.io/v1beta1
+#metadata:
+#  name: sab-dashboard-kube-system-clusterrolebinding-ns-<%= kubeadm_dex_user %>
+#subjects:
+#  - kind: User
+#    name: "<%= @kubeadm_dex_login['issuer'] -%>#<%= scope.function_k8s_dex_uid([kubeadm_dex_user, @kubeadm_dex_login['connector-id']]) -%>"
+#    apiGroup: rbac.authorization.k8s.io
+#roleRef:
+#  kind: ClusterRole
+#  name: sab-dashboard-kube-system-clusterrole
+#  apiGroup: rbac.authorization.k8s.io
+#---
+# we need a shadow serviceaccount for this user
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: kube-system
+  name: sab-sa-<%= kubeadm_dex_user %>
+---
+# bind the shadow serviceaccount to the namespace owner role
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: <%= kubeadm_dex_user %>
+  name: sab-sa-<%= kubeadm_dex_user %>
+subjects:
+  - kind: ServiceAccount
+    name: sab-sa-<%= kubeadm_dex_user %>
+    namespace: kube-system
+roleRef:
+  kind: Role
+  name: sab-ns-owner
+  apiGroup: rbac.authorization.k8s.io
+---
+# bind the shadow serviceaccount to reqd perms on the default namespace
+kind: RoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: default
+  name: sab-default-rolebinding-sa-<%= kubeadm_dex_user %>
+subjects:
+  - kind: ServiceAccount
+    name: sab-sa-<%= kubeadm_dex_user %>
+    namespace: kube-system
+roleRef:
+  kind: Role
+  name: sab-default-role
+  apiGroup: rbac.authorization.k8s.io
+---
+# bind the shadow serviceaccount to reqd perms for dashboard
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: sab-dashboard-kube-system-clusterrolebinding-sa-<%= kubeadm_dex_user %>
+subjects:
+  - kind: ServiceAccount
+    name: sab-sa-<%= kubeadm_dex_user %>
+    namespace: kube-system
+roleRef:
+  kind: ClusterRole
+  name: sab-dashboard-kube-system-clusterrole
+  apiGroup: rbac.authorization.k8s.io
+---
+<% end -%>
+

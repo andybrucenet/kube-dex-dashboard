@@ -1,0 +1,69 @@
+---
+# do anything, to anyone, anytime ;)
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: sab-admin-role
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["*"]
+- nonResourceURLs: ["*"]
+  verbs: ["*"]
+---
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: default
+  name: sab-default-role
+rules:
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["get","list"]
+---
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: dex
+rules:
+- apiGroups: ["oidc.coreos.com"]
+  resources: ["*"]
+  verbs: ["*"]
+  nonResourceURLs: []
+- apiGroups: ["extensions"]
+  resources: ["thirdpartyresources"]
+  verbs: ["create"]
+  nonResourceURLs: []
+---
+# role to permit minimal, readonly access
+kind: Role
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  namespace: kube-system
+  name: sab-dashboard-role
+rules:
+- apiGroups: [""]
+  resources: ["services/proxy"]
+  verbs: ["create"]
+---
+# cluster role required for initial dashboard get
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: sab-dashboard-clusterrole
+rules:
+- nonResourceURLs: ["*"]
+  verbs: ["get"]
+---
+# ABr: experiments with rbac - see sab-users.yaml for details
+# special role to permit limited access to kube-system
+kind: ClusterRole
+apiVersion: rbac.authorization.k8s.io/v1beta1
+metadata:
+  name: sab-dashboard-kube-system-clusterrole
+rules:
+- apiGroups: [""]
+  resources: ["namespaces"]
+  verbs: ["list"]
+---
+
